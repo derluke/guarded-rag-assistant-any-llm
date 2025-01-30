@@ -26,7 +26,12 @@ from docsassist.deployments import (
     rag_deployment_env_name,
 )
 from docsassist.i18n import LocaleSettings
-from docsassist.schema import ApplicationType, RAGType
+from docsassist.schema import (
+    PROMPT_COLUMN_NAME,
+    TARGET_COLUMN_NAME,
+    ApplicationType,
+    RAGType,
+)
 from infra import (
     settings_app_infra,
     settings_generative,
@@ -34,6 +39,7 @@ from infra import (
     settings_main,
 )
 from infra.common.feature_flags import check_feature_flags
+from infra.common.globals import GlobalLLM
 from infra.common.papermill import run_notebook
 from infra.common.urls import get_deployment_url
 from infra.components.custom_model_deployment import CustomModelDeployment
@@ -41,8 +47,10 @@ from infra.components.dr_llm_credential import (
     get_credential_runtime_parameter_values,
     get_credentials,
 )
-from infra.components.rag_custom_model import RAGCustomModel
+from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
 from infra.settings_global_guardrails import global_guardrails
+
+DEPLOYMENT_ID = "673ca0b6d0afdcf950df2caa"
 
 LocaleSettings().setup_locale()
 
@@ -114,17 +122,52 @@ guard_configurations = [
 ]
 
 if settings_main.core.rag_type == RAGType.DR:
-    rag_custom_model = RAGCustomModel(
-        resource_name=f"Guarded RAG Prep [{settings_main.project_name}]",
-        use_case=use_case,
-        dataset_args=settings_generative.dataset_args,
-        playground_args=settings_generative.playground_args,
-        vector_database_args=settings_generative.vector_database_args,
-        llm_blueprint_args=settings_generative.llm_blueprint_args,
-        runtime_parameter_values=credential_runtime_parameter_values,
-        guard_configurations=guard_configurations,
-        custom_model_args=settings_generative.custom_model_args,
+    dataset = datarobot.DatasetFromFile(
+        use_case_ids=[use_case.id],
+        **settings_generative.dataset_args.model_dump(),
     )
+    vector_database = datarobot.VectorDatabase(
+        dataset_id=dataset.id,
+        use_case_id=use_case.id,
+        **settings_generative.vector_database_args.model_dump(),
+    )
+    playground = datarobot.Playground(
+        use_case_id=use_case.id,
+        **settings_generative.playground_args.model_dump(),
+    )
+
+    if settings_generative.LLM.name == GlobalLLM.DEPLOYED_LLM.name:
+        proxy_llm_deployment = datarobot.Deployment.get(
+            resource_name="Existing LLM Deployment", id=DEPLOYMENT_ID
+        )
+
+        llm_blueprint = ProxyLLMBlueprint(
+            resource_name=f"Proxy Model LLM Blueprint [{settings_main.project_name}]",
+            llm_blueprint_args=settings_generative.llm_blueprint_args,
+            playground_id=playground.id,
+            prompt_column_name=PROMPT_COLUMN_NAME,
+            target_column_name=TARGET_COLUMN_NAME,
+            proxy_llm_deployment_id=proxy_llm_deployment.id,
+            vector_database_id=vector_database.id,
+        )
+
+    elif settings_generative.LLM.name != GlobalLLM.DEPLOYED_LLM.name:
+        llm_blueprint = datarobot.LlmBlueprint(  # type: ignore[assignment]
+            playground_id=playground.id,
+            vector_database_id=vector_database.id,
+            **settings_generative.llm_blueprint_args.model_dump(),
+        )
+
+    rag_custom_model = datarobot.CustomModel(
+        **settings_generative.custom_model_args.model_dump(exclude_none=True),
+        use_case_ids=[use_case.id],
+        source_llm_blueprint_id=llm_blueprint.id,
+        guard_configurations=guard_configurations,
+        runtime_parameter_values=[]
+        if settings_generative.LLM.name == GlobalLLM.DEPLOYED_LLM.name
+        else credential_runtime_parameter_values,
+    )
+
 elif settings_main.core.rag_type == RAGType.DIY:
     if not all(
         [
@@ -139,7 +182,7 @@ elif settings_main.core.rag_type == RAGType.DIY:
             f"Using existing outputs from build_rag.ipynb in '{settings_generative.diy_rag_deployment_path}'"
         )
 
-    rag_custom_model = datarobot.CustomModel(  # type: ignore[assignment]
+    rag_custom_model = datarobot.CustomModel(
         files=settings_generative.get_diy_rag_files(
             runtime_parameter_values=credential_runtime_parameter_values,
         ),

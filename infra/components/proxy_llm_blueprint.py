@@ -1,0 +1,95 @@
+# Copyright 2024 DataRobot, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from typing import Optional
+
+import datarobot as dr
+import pulumi
+import pulumi_datarobot as datarobot
+from datarobotx.idp.custom_model_llm_validation import (
+    get_update_or_create_custom_model_llm_validation,
+)
+from datarobotx.idp.llm_blueprints import get_or_create_llm_blueprint
+
+from infra.common.schema import LLMBlueprintArgs
+
+
+class ProxyLLMBlueprint(pulumi.ComponentResource):
+    def __init__(
+        self,
+        resource_name: str,
+        proxy_llm_deployment_id: pulumi.Output[str],
+        playground_id: pulumi.Output[str],
+        prompt_column_name: str,
+        target_column_name: str,
+        llm_blueprint_args: LLMBlueprintArgs,
+        vector_database_id: pulumi.Output[str] | None = None,
+        opts: Optional[pulumi.ResourceOptions] = None,
+    ) -> None:
+        super().__init__(
+            "custom:datarobot:ProxyLLMBlueprint", resource_name, None, opts
+        )
+        dr_client = dr.client.get_client()
+        self.llm_validation_id = pulumi.Output.all(
+            proxy_llm_deployment_id=proxy_llm_deployment_id,
+        ).apply(
+            lambda kwargs: get_update_or_create_custom_model_llm_validation(
+                endpoint=dr_client.endpoint,
+                token=dr_client.token,
+                deployment_id=kwargs["proxy_llm_deployment_id"],
+                prompt_column_name=prompt_column_name,
+                target_column_name=target_column_name,
+            )
+        )
+        old_settings = llm_blueprint_args
+        llm_blueprint_id = pulumi.Output.all(
+            llm_validation_id=self.llm_validation_id,
+            playground_id=playground_id,
+            vector_database_id=vector_database_id
+            if vector_database_id is not None
+            else None,
+        ).apply(
+            lambda kwargs: get_or_create_llm_blueprint(
+                endpoint=dr_client.endpoint,
+                token=dr_client.token,
+                llm_settings=dr.models.genai.llm_blueprint.LLMSettingsCustomModelDict(
+                    system_prompt=old_settings.llm_settings.system_prompt,
+                    validation_id=kwargs["llm_validation_id"],
+                ),
+                llm="custom-model",
+                playground=kwargs["playground_id"],
+                name=old_settings.resource_name,
+                vector_database=kwargs["vector_database_id"],
+                vector_database_settings=old_settings.vector_database_settings.model_dump(),
+            )
+        )
+        self.llm_blueprint = datarobot.LlmBlueprint.get(
+            id=llm_blueprint_id, resource_name="Custom Blueprint"
+        )
+        self.register_outputs(
+            {
+                "llm_validation_id": self.llm_validation_id,
+                "id": self.llm_blueprint.id,
+            }
+        )
+
+    @property
+    @pulumi.getter(name="id")
+    def id(self) -> pulumi.Output[str]:
+        """
+        The ID of the latest Custom Model version.
+        """
+        return self.llm_blueprint.id
