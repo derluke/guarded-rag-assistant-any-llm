@@ -15,10 +15,13 @@
 import pulumi_datarobot as datarobot
 from pydantic import BaseModel
 
+from docsassist.credentials import AzureOpenAICredentials
 from docsassist.i18n import gettext
+from infra.components.dr_llm_credential import get_credentials
 
 from .common.globals import (
     GlobalGuardrailTemplateName,
+    GlobalLLM,
     GlobalRegisteredModelName,
 )
 from .common.schema import (
@@ -96,6 +99,38 @@ prompt_injection = GlobalGuardrail(
                 "I have detected that your question contains a prompt injection. Please rephrase your question."
             ),
         ),
+    ),
+)
+
+
+guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_3_5_TURBO)
+if guardrail_credentials is None or not isinstance(
+    guardrail_credentials, AzureOpenAICredentials
+):
+    raise ValueError(
+        "Stay on topic guardrail requires Azure OpenAI credentials."
+        "Please provide Azure OpenAI credentials in your .env file."
+    )
+
+guardrail_api_token_credential = datarobot.ApiTokenCredential(
+    resource_name=f"Stay on Topic Guard Credential [{project_name}]",
+    api_token=guardrail_credentials.api_key,
+)
+stay_on_topic_guardrail = datarobot.CustomModelGuardConfigurationArgs(
+    name=f"Stay on Topic Guard Configuration [{project_name}]",
+    template_name="Stay on topic for inputs",
+    openai_api_base=guardrail_credentials.azure_endpoint,
+    openai_credential=guardrail_api_token_credential.id,
+    openai_deployment_id=guardrail_credentials.azure_deployment,
+    stages=[Stage.PROMPT],
+    llm_type="azureOpenAi",
+    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
+        action=ModerationAction.BLOCK,
+        condition=Condition(
+            comparand="TRUE",
+            comparator=GuardConditionComparator.EQUALS,
+        ).model_dump_json(),
+        message="Please stay on topic, my friend",
     ),
 )
 

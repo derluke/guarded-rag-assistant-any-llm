@@ -35,7 +35,7 @@ from ..settings_main import project_name
 
 
 def get_credential_runtime_parameter_values(
-    credentials: DRCredentials,
+    credentials: DRCredentials | None,
 ) -> list[datarobot.CustomModelRuntimeParameterValueArgs]:
     if credentials is None:
         return []

@@ -48,9 +48,18 @@ from infra.components.dr_llm_credential import (
     get_credentials,
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
-from infra.settings_global_guardrails import global_guardrails
+from infra.settings_global_guardrails import (
+    global_guardrails,
+    stay_on_topic_guardrail,
+)
 
-DEPLOYMENT_ID = "673ca0b6d0afdcf950df2caa"
+DEPLOYMENT_ID = os.environ.get("TEXTGEN_DEPLOYMENT_ID")
+
+if settings_generative.LLM == GlobalLLM.DEPLOYED_LLM:
+    if DEPLOYMENT_ID is None:
+        raise ValueError(
+            "TEXTGEN_DEPLOYMENT_ID must be set when using a deployed LLM. Plese check your .env file"
+        )
 
 LocaleSettings().setup_locale()
 
@@ -103,7 +112,10 @@ global_guard_deployments = [
     for guard in global_guardrails
 ]
 
-all_guard_deployments = [keyword_guard_deployment] + global_guard_deployments
+
+all_guard_deployments = [
+    keyword_guard_deployment,
+] + global_guard_deployments
 
 all_guardrails_configs = [
     settings_keyword_guard.custom_model_guard_configuration_args
@@ -119,7 +131,7 @@ guard_configurations = [
         all_guard_deployments,
         all_guardrails_configs,
     )
-]
+] + [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
@@ -136,7 +148,8 @@ if settings_main.core.rag_type == RAGType.DR:
         **settings_generative.playground_args.model_dump(),
     )
 
-    if settings_generative.LLM.name == GlobalLLM.DEPLOYED_LLM.name:
+    if settings_generative.LLM == GlobalLLM.DEPLOYED_LLM:
+        assert DEPLOYMENT_ID is not None, "TEXTGEN_DEPLOYMENT_ID must be set in .env"
         proxy_llm_deployment = datarobot.Deployment.get(
             resource_name="Existing LLM Deployment", id=DEPLOYMENT_ID
         )
