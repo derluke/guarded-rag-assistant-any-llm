@@ -56,7 +56,7 @@ In addition to creating a hosted, shareable user interface, the guarded RAG assi
 
    Please refer to the documentation inside `.env.template`
 
-   This template uses NEMO guardrails which require valid azure OpenAI credentials. You can change this 
+   This template uses NEMO guardrails which require valid azure OpenAI credentials. You can change this in `infra/settings_global_guardrails.py`.
 
 4. In a terminal, run:
    ```bash
