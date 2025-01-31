@@ -40,7 +40,7 @@ class ApplicationType(str, Enum):
 
 
 PROMPT_COLUMN_NAME: str = "promptText"
-TARGET_COLUMN_NAME: str = "resultText"
+TARGET_COLUMN_NAME: str = "response"
 
 
 class RAGInput(BaseModel):
