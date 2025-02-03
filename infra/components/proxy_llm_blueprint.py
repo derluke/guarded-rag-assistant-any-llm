@@ -28,32 +28,60 @@ from infra.common.schema import LLMBlueprintArgs
 
 
 class ProxyLLMBlueprint(pulumi.ComponentResource):
+    @staticmethod
+    def _get_custom_model_llm_validation(
+        proxy_llm_deployment_id: str, prompt_column_name: str | None = None
+    ) -> str:
+        dr_client = dr.client.get_client()
+        try:
+            deployment = dr.Deployment.get(deployment_id=proxy_llm_deployment_id)  # type: ignore[attr-defined]
+        except Exception as e:
+            raise ValueError("Couldn't find deployment ID") from e
+        if deployment.model is None:
+            raise ValueError("Deployment model is not set")
+
+        target_column_name = deployment.model["target_name"]
+
+        if prompt_column_name is None:
+            if (
+                "prompt" not in deployment.model
+                or deployment.model.get("prompt") is None
+            ):
+                pulumi.warn(
+                    "Couldn't infer prompt column name of the textgen deployment. Using default 'promptText'."
+                )
+            prompt_column_name = str(deployment.model.get("prompt", "promptText"))
+
+        llm_validation_id = get_update_or_create_custom_model_llm_validation(
+            endpoint=dr_client.endpoint,
+            token=dr_client.token,
+            deployment_id=proxy_llm_deployment_id,
+            prompt_column_name=prompt_column_name,
+            target_column_name=target_column_name,
+        )
+        return str(llm_validation_id)
+
     def __init__(
         self,
         resource_name: str,
         proxy_llm_deployment_id: pulumi.Output[str],
         playground_id: pulumi.Output[str],
-        prompt_column_name: str,
-        target_column_name: str,
         llm_blueprint_args: LLMBlueprintArgs,
         vector_database_id: pulumi.Output[str] | None = None,
+        prompt_column_name: str | None = None,
         opts: Optional[pulumi.ResourceOptions] = None,
     ) -> None:
         super().__init__(
             "custom:datarobot:ProxyLLMBlueprint", resource_name, None, opts
         )
-        dr_client = dr.client.get_client()
-        self.llm_validation_id = pulumi.Output.all(
-            proxy_llm_deployment_id=proxy_llm_deployment_id,
-        ).apply(
-            lambda kwargs: get_update_or_create_custom_model_llm_validation(
-                endpoint=dr_client.endpoint,
-                token=dr_client.token,
-                deployment_id=kwargs["proxy_llm_deployment_id"],
-                prompt_column_name=prompt_column_name,
-                target_column_name=target_column_name,
+
+        self.llm_validation_id = proxy_llm_deployment_id.apply(
+            lambda id: self._get_custom_model_llm_validation(
+                proxy_llm_deployment_id=id, prompt_column_name=prompt_column_name
             )
         )
+        dr_client = dr.client.get_client()
+
         old_settings = llm_blueprint_args
         llm_blueprint_id = pulumi.Output.all(
             llm_validation_id=self.llm_validation_id,
