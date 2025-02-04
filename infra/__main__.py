@@ -47,8 +47,7 @@ from infra.components.dr_llm_credential import (
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
 from infra.settings_global_guardrails import (
-    global_guardrails,
-    stay_on_topic_guardrail,
+    stay_on_topic_guardrail
 )
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
 
@@ -98,25 +97,14 @@ keyword_guard_deployment = CustomModelDeployment(
     deployment_args=settings_keyword_guard.deployment_args,
 )
 
-global_guard_deployments = [
-    datarobot.Deployment(
-        registered_model_version_id=datarobot.get_global_model(
-            name=guard.registered_model_name,
-        ).version_id,
-        prediction_environment_id=prediction_environment.id,
-        use_case_ids=[use_case.id],
-        **guard.deployment_args.model_dump(),
-    )
-    for guard in global_guardrails
-]
 
 all_guard_deployments = [
     keyword_guard_deployment,
-] + global_guard_deployments
+]
 
 all_guardrails_configs = [
     settings_keyword_guard.custom_model_guard_configuration_args
-] + [guard.custom_model_guard_configuration_args for guard in global_guardrails]
+]
 
 
 guard_configurations = [
@@ -249,12 +237,6 @@ qa_application.id.apply(settings_app_infra.ensure_app_settings)
 
 
 pulumi.export(rag_deployment_env_name, rag_deployment.id)
-pulumi.export(app_env_name, qa_application.id)
-for deployment, config in zip(global_guard_deployments, global_guardrails):
-    pulumi.export(
-        config.deployment_args.resource_name,
-        deployment.id.apply(get_deployment_url),
-    )
 
 pulumi.export(
     settings_generative.deployment_args.resource_name,
