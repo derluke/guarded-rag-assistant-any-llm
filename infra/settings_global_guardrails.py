@@ -105,7 +105,7 @@ prompt_injection = GlobalGuardrail(
 )
 
 
-guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_3_5_TURBO)
+guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_4_O)
 if guardrail_credentials is None or not isinstance(
     guardrail_credentials, AzureOpenAICredentials
 ):
