@@ -33,7 +33,6 @@ from docsassist.schema import (
 from infra import (
     settings_app_infra,
     settings_generative,
-    settings_keyword_guard,
     settings_main,
 )
 from infra.common.feature_flags import check_feature_flags
@@ -89,34 +88,11 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
     credentials=credentials
 )
 
-keyword_guard_deployment = CustomModelDeployment(
-    resource_name=f"Keyword Guard [{settings_main.project_name}]",
-    custom_model_args=settings_keyword_guard.custom_model_args,
-    registered_model_args=settings_keyword_guard.registered_model_args,
-    prediction_environment=prediction_environment,
-    deployment_args=settings_keyword_guard.deployment_args,
-)
 
 
-all_guard_deployments = [
-    keyword_guard_deployment,
-]
-
-all_guardrails_configs = [
-    settings_keyword_guard.custom_model_guard_configuration_args
-]
 
 
-guard_configurations = [
-    datarobot.CustomModelGuardConfigurationArgs(
-        deployment_id=deployment.id,
-        **guard_config_args.model_dump(mode="json", exclude_none=True),
-    )
-    for deployment, guard_config_args in zip(
-        all_guard_deployments,
-        all_guardrails_configs,
-    )
-] + [stay_on_topic_guardrail]
+guard_configurations = [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
