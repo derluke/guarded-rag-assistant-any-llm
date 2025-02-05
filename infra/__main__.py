@@ -36,7 +36,6 @@ from docsassist.schema import (
 from infra import (
     settings_app_infra,
     settings_generative,
-    settings_keyword_guard,
     settings_main,
 )
 from infra.common.feature_flags import check_feature_flags
@@ -50,10 +49,8 @@ from infra.components.dr_llm_credential import (
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
 from infra.settings_app_infra import apply_feedback_score
-from infra.settings_global_guardrails import (
-    global_guardrails,
-    stay_on_topic_guardrail,
-)
+
+# from infra.settings_global_guardrails import stay_on_topic_guardrail
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
 
 DEPLOYMENT_ID = os.environ.get("TEXTGEN_DEPLOYMENT_ID")
@@ -94,45 +91,8 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
     credentials=credentials
 )
 
-keyword_guard_deployment = CustomModelDeployment(
-    resource_name=f"Keyword Guard [{settings_main.project_name}]",
-    custom_model_args=settings_keyword_guard.custom_model_args,
-    registered_model_args=settings_keyword_guard.registered_model_args,
-    prediction_environment=prediction_environment,
-    deployment_args=settings_keyword_guard.deployment_args,
-)
-
-global_guard_deployments = [
-    datarobot.Deployment(
-        registered_model_version_id=datarobot.get_global_model(
-            name=guard.registered_model_name,
-        ).version_id,
-        prediction_environment_id=prediction_environment.id,
-        use_case_ids=[use_case.id],
-        **guard.deployment_args.model_dump(),
-    )
-    for guard in global_guardrails
-]
-
-all_guard_deployments = [
-    keyword_guard_deployment,
-] + global_guard_deployments
-
-all_guardrails_configs = [
-    settings_keyword_guard.custom_model_guard_configuration_args
-] + [guard.custom_model_guard_configuration_args for guard in global_guardrails]
-
-
-guard_configurations = [
-    datarobot.CustomModelGuardConfigurationArgs(
-        deployment_id=deployment.id,
-        **guard_config_args.model_dump(mode="json", exclude_none=True),
-    )
-    for deployment, guard_config_args in zip(
-        all_guard_deployments,
-        all_guardrails_configs,
-    )
-] + [stay_on_topic_guardrail]
+guard_configurations: list[datarobot.CustomModelGuardConfigurationArgs] = []
+# guard_configurations = [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
@@ -290,11 +250,6 @@ qa_application.id.apply(settings_app_infra.ensure_app_settings)
 
 pulumi.export(rag_deployment_env_name, rag_deployment.id)
 pulumi.export(app_env_name, qa_application.id)
-for deployment, config in zip(global_guard_deployments, global_guardrails):
-    pulumi.export(
-        config.deployment_args.resource_name,
-        deployment.id.apply(get_deployment_url),
-    )
 
 pulumi.export(
     settings_generative.deployment_args.resource_name,
