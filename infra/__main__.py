@@ -21,6 +21,12 @@ import pulumi_datarobot as datarobot
 
 sys.path.append("..")
 
+import datarobot as dr
+from datarobotx.idp.custom_application_source_version import (
+    _unsafe_get_or_create_custom_application_source_version_from_previous,
+)
+from datarobotx.idp.custom_metrics import get_update_or_create_custom_metric
+
 from docsassist.deployments import (
     app_env_name,
     rag_deployment_env_name,
@@ -218,6 +224,7 @@ rag_deployment = CustomModelDeployment(
     use_case_ids=[use_case.id],
 )
 
+
 app_runtime_parameters = [
     datarobot.ApplicationSourceRuntimeParameterValueArgs(
         key=rag_deployment_env_name, type="deployment", value=rag_deployment.id
@@ -238,18 +245,87 @@ if settings_main.core.application_type == ApplicationType.DIY:
         use_case_ids=[use_case.id],
     )
 elif settings_main.core.application_type == ApplicationType.DR:
+    client = dr.client.get_client()
+    feedback_metric_id = rag_deployment.id.apply(
+        lambda deployment_id: get_update_or_create_custom_metric(
+            endpoint=client.endpoint,
+            token=client.token,
+            deployment_id=deployment_id,
+            name="User Feedback",
+            baseline_values=[{"value": 0.5}],
+            directionality="higherIsBetter",
+            units="Positive Feedback",
+            type="average",
+            is_model_specific=True,
+        )
+    )
     qa_application = datarobot.QaApplication(  # type: ignore[assignment]
         resource_name=settings_app_infra.app_resource_name,
         name=f"Guarded RAG Assistant [{settings_main.project_name}]",
         deployment_id=rag_deployment.deployment_id,
         opts=pulumi.ResourceOptions(delete_before_replace=True),
     )
+    qa_application.source_id
 else:
     raise NotImplementedError(
         f"Unknown application type: {settings_main.core.application_type}"
     )
 
+
 qa_application.id.apply(settings_app_infra.ensure_app_settings)
+
+
+def apply_feedback_score(
+    application_id: str, custom_metric_id: str, rag_deployment_id: str
+) -> str:
+    client = dr.client.get_client()
+    try:
+        app_source_id = (
+            client.get(f"customApplications/{application_id}/")
+            .json()
+            .get("customApplicationSourceId")
+        )
+        pulumi.info(f"app_source_id: {app_source_id}")
+    except:
+        return None
+    app_source_version_id = (
+        _unsafe_get_or_create_custom_application_source_version_from_previous(
+            endpoint=client.endpoint,
+            token=client.token,
+            custom_application_source_id=app_source_id,
+            runtime_parameter_values=[
+                {
+                    "field_name": "DEPLOYMENT_ID",
+                    "value": rag_deployment_id,
+                    "type": "string",
+                },
+                {
+                    "field_name": "CUSTOM_METRIC",
+                    "value": custom_metric_id,
+                    "type": "string",
+                },
+            ],
+        )
+    )
+    return str(app_source_version_id)
+
+
+app_source_version_id = pulumi.Output.all(
+    app_id=qa_application.id,
+    feedback_metric_id=feedback_metric_id,
+    rag_deployment_id=rag_deployment.deployment_id,
+).apply(
+    lambda kwargs: apply_feedback_score(
+        application_id=kwargs["app_id"],
+        custom_metric_id=kwargs["feedback_metric_id"],
+        rag_deployment_id=kwargs["rag_deployment_id"],
+    )
+)
+
+qa_application2 = datarobot.CustomApplication(
+    resource_name="qa_application2",
+    source_version_id=app_source_version_id,
+)
 
 
 pulumi.export(rag_deployment_env_name, rag_deployment.id)
