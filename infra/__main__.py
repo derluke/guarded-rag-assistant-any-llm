@@ -45,9 +45,9 @@ from infra.components.dr_llm_credential import (
     get_credentials,
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
-from infra.settings_global_guardrails import (
-    stay_on_topic_guardrail
-)
+# from infra.settings_global_guardrails import (
+#     stay_on_topic_guardrail
+# )
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
 
 DEPLOYMENT_ID = os.environ.get("TEXTGEN_DEPLOYMENT_ID")
@@ -89,10 +89,7 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
 )
 
 
-
-
-
-guard_configurations = [stay_on_topic_guardrail]
+# guard_configurations = [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
@@ -135,7 +132,7 @@ if settings_main.core.rag_type == RAGType.DR:
         **settings_generative.custom_model_args.model_dump(exclude_none=True),
         use_case_ids=[use_case.id],
         source_llm_blueprint_id=llm_blueprint.id,
-        guard_configurations=guard_configurations,
+ #       guard_configurations=guard_configurations,
         runtime_parameter_values=[]
         if settings_generative.LLM.name == GlobalLLM.DEPLOYED_LLM.name
         else credential_runtime_parameter_values,
@@ -160,7 +157,7 @@ elif settings_main.core.rag_type == RAGType.DIY:
             runtime_parameter_values=credential_runtime_parameter_values,
         ),
         runtime_parameter_values=credential_runtime_parameter_values,
-        guard_configurations=guard_configurations,
+#        guard_configurations=guard_configurations,
         use_case_ids=[use_case.id],
         **settings_generative.custom_model_args.model_dump(
             mode="json", exclude_none=True
