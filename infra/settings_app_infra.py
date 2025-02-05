@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import datarobot as dr
+import pulumi
 from datarobotx.idp.custom_application_source_version import (
     _unsafe_get_or_create_custom_application_source_version_from_previous,
 )
-import pulumi
 
 from docsassist.i18n import LanguageCode, LocaleSettings
 from infra.common.globals import GlobalRuntimeEnvironment
@@ -91,7 +91,6 @@ def apply_feedback_score(
             .json()
             .get("customApplicationSourceId")
         )
-        pulumi.info(f"app_source_id: {app_source_id}")
     except Exception as e:
         raise pulumi.RunError(
             f"Failed to get custom application source id for application {application_id}"

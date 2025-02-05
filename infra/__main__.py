@@ -256,7 +256,7 @@ elif settings_main.core.application_type == ApplicationType.DR:
 
     qa_application_pre = datarobot.QaApplication(
         resource_name=f"{settings_app_infra.app_resource_name}_pre",
-        name=f"Guarded RAG Assistant [{settings_main.project_name}]",
+        name=f"Guarded RAG Assistant [{settings_main.project_name}] [Pre]",
         deployment_id=rag_deployment.deployment_id,
         opts=pulumi.ResourceOptions(delete_before_replace=True),
     )
