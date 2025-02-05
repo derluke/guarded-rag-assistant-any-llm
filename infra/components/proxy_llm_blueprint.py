@@ -30,7 +30,9 @@ from infra.common.schema import LLMBlueprintArgs
 class ProxyLLMBlueprint(pulumi.ComponentResource):
     @staticmethod
     def _get_custom_model_llm_validation(
-        proxy_llm_deployment_id: str, prompt_column_name: str | None = None
+        proxy_llm_deployment_id: str,
+        use_case_id: str,
+        prompt_column_name: str | None = None,
     ) -> str:
         dr_client = dr.client.get_client()
         try:
@@ -58,6 +60,7 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
             deployment_id=proxy_llm_deployment_id,
             prompt_column_name=prompt_column_name,
             target_column_name=target_column_name,
+            use_case=use_case_id,
         )
         return str(llm_validation_id)
 
@@ -65,6 +68,7 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
         self,
         resource_name: str,
         proxy_llm_deployment_id: pulumi.Output[str],
+        use_case_id: pulumi.Output[str],
         playground_id: pulumi.Output[str],
         llm_blueprint_args: LLMBlueprintArgs,
         vector_database_id: pulumi.Output[str] | None = None,
@@ -75,9 +79,13 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
             "custom:datarobot:ProxyLLMBlueprint", resource_name, None, opts
         )
 
-        self.llm_validation_id = proxy_llm_deployment_id.apply(
-            lambda id: self._get_custom_model_llm_validation(
-                proxy_llm_deployment_id=id, prompt_column_name=prompt_column_name
+        self.llm_validation_id = pulumi.Output.all(
+            proxy_llm_deployment_id=proxy_llm_deployment_id, use_case_id=use_case_id
+        ).apply(
+            lambda kwargs: self._get_custom_model_llm_validation(
+                proxy_llm_deployment_id=kwargs["proxy_llm_deployment_id"],
+                use_case_id=kwargs["use_case_id"],
+                prompt_column_name=prompt_column_name,
             )
         )
         dr_client = dr.client.get_client()
