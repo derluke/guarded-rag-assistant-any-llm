@@ -12,37 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: F401
+
 import textwrap
 
 import pulumi_datarobot as datarobot
-from pydantic import BaseModel
 
 from docsassist.credentials import AzureOpenAICredentials
-from docsassist.i18n import gettext
 from infra.components.dr_llm_credential import get_credentials
 
 from .common.globals import (
-    GlobalGuardrailTemplateName,
     GlobalLLM,
-    GlobalRegisteredModelName,
 )
 from .common.schema import (
     Condition,
-    CustomModelGuardConfigurationArgs,
-    DeploymentArgs,
     GuardConditionComparator,
-    Intervention,
     ModerationAction,
     Stage,
 )
-from .settings_main import default_prediction_server_id, project_name
-
-
-# class GlobalGuardrail(BaseModel):
-#     deployment_args: DeploymentArgs
-#     registered_model_name: GlobalRegisteredModelName
-#     custom_model_guard_configuration_args: CustomModelGuardConfigurationArgs
-
+from .settings_main import project_name
 
 # guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_4_O)
 # if guardrail_credentials is None or not isinstance(
