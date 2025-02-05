@@ -22,9 +22,6 @@ import pulumi_datarobot as datarobot
 sys.path.append("..")
 
 import datarobot as dr
-from datarobotx.idp.custom_application_source_version import (
-    _unsafe_get_or_create_custom_application_source_version_from_previous,
-)
 from datarobotx.idp.custom_metrics import get_update_or_create_custom_metric
 
 from docsassist.deployments import (
@@ -54,6 +51,7 @@ from infra.components.dr_llm_credential import (
     get_credentials,
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
+from infra.settings_app_infra import apply_feedback_score
 from infra.settings_global_guardrails import (
     global_guardrails,
     stay_on_topic_guardrail,
@@ -259,13 +257,32 @@ elif settings_main.core.application_type == ApplicationType.DR:
             is_model_specific=True,
         )
     )
-    qa_application = datarobot.QaApplication(  # type: ignore[assignment]
-        resource_name=settings_app_infra.app_resource_name,
+
+    qa_application_pre = datarobot.QaApplication(
+        resource_name=f"{settings_app_infra.app_resource_name}_pre",
         name=f"Guarded RAG Assistant [{settings_main.project_name}]",
         deployment_id=rag_deployment.deployment_id,
         opts=pulumi.ResourceOptions(delete_before_replace=True),
     )
-    qa_application.source_id
+
+    app_source_version_id = pulumi.Output.all(
+        app_id=qa_application_pre.id,
+        feedback_metric_id=feedback_metric_id,
+        rag_deployment_id=rag_deployment.deployment_id,
+    ).apply(
+        lambda kwargs: apply_feedback_score(
+            application_id=kwargs["app_id"],
+            custom_metric_id=kwargs["feedback_metric_id"],
+            rag_deployment_id=kwargs["rag_deployment_id"],
+        )
+    )
+    qa_application = datarobot.CustomApplication(
+        resource_name=settings_app_infra.app_resource_name,
+        name=f"Guarded RAG Assistant [{settings_main.project_name}]",
+        source_version_id=app_source_version_id,
+        opts=pulumi.ResourceOptions(delete_before_replace=True),
+    )
+
 else:
     raise NotImplementedError(
         f"Unknown application type: {settings_main.core.application_type}"
@@ -273,59 +290,6 @@ else:
 
 
 qa_application.id.apply(settings_app_infra.ensure_app_settings)
-
-
-def apply_feedback_score(
-    application_id: str, custom_metric_id: str, rag_deployment_id: str
-) -> str:
-    client = dr.client.get_client()
-    try:
-        app_source_id = (
-            client.get(f"customApplications/{application_id}/")
-            .json()
-            .get("customApplicationSourceId")
-        )
-        pulumi.info(f"app_source_id: {app_source_id}")
-    except:
-        return None
-    app_source_version_id = (
-        _unsafe_get_or_create_custom_application_source_version_from_previous(
-            endpoint=client.endpoint,
-            token=client.token,
-            custom_application_source_id=app_source_id,
-            runtime_parameter_values=[
-                {
-                    "field_name": "DEPLOYMENT_ID",
-                    "value": rag_deployment_id,
-                    "type": "string",
-                },
-                {
-                    "field_name": "CUSTOM_METRIC",
-                    "value": custom_metric_id,
-                    "type": "string",
-                },
-            ],
-        )
-    )
-    return str(app_source_version_id)
-
-
-app_source_version_id = pulumi.Output.all(
-    app_id=qa_application.id,
-    feedback_metric_id=feedback_metric_id,
-    rag_deployment_id=rag_deployment.deployment_id,
-).apply(
-    lambda kwargs: apply_feedback_score(
-        application_id=kwargs["app_id"],
-        custom_metric_id=kwargs["feedback_metric_id"],
-        rag_deployment_id=kwargs["rag_deployment_id"],
-    )
-)
-
-qa_application2 = datarobot.CustomApplication(
-    resource_name="qa_application2",
-    source_version_id=app_source_version_id,
-)
 
 
 pulumi.export(rag_deployment_env_name, rag_deployment.id)
