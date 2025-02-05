@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional, Union
 
 import datarobot as dr
 import pulumi
@@ -53,6 +53,33 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
                     "Couldn't infer prompt column name of the textgen deployment. Using default 'promptText'."
                 )
             prompt_column_name = str(deployment.model.get("prompt", "promptText"))
+
+        from datarobot.models.genai.custom_model_validation import CustomModelValidation  # noqa: I001
+        from datarobot import Deployment, Model  # type: ignore
+
+        CustomModelValidation._update = CustomModelValidation.update  # type: ignore
+
+        def new_update(
+            self: Any,
+            name: Optional[str] = None,
+            prompt_column_name: Optional[str] = None,
+            target_column_name: Optional[str] = None,
+            deployment: Optional[Union[Deployment, str]] = None,
+            model: Optional[Union[Model, str]] = None,
+            prediction_timeout: Optional[int] = None,
+            **kwargs: Any,
+        ) -> CustomModelValidation:
+            return CustomModelValidation._update(  # type: ignore
+                self,
+                name=name,
+                prompt_column_name=prompt_column_name,
+                target_column_name=target_column_name,
+                deployment=deployment,
+                model=model,
+                prediction_timeout=prediction_timeout,
+            )
+
+        CustomModelValidation.update = new_update  # type: ignore
 
         llm_validation_id = get_update_or_create_custom_model_llm_validation(
             endpoint=dr_client.endpoint,
