@@ -30,6 +30,9 @@ from .settings_main import (
     runtime_environment_moderations,
 )
 
+# Override prompt column name here in case it's different from the default and prompt column has not been set on the deployment
+TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME = None
+
 custom_model_args = CustomModelArgs(
     resource_name=f"Guarded RAG Proxy LLM Custom Model [{project_name}]",
     base_environment_id=runtime_environment_moderations.id,

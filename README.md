@@ -56,7 +56,7 @@ In addition to creating a hosted, shareable user interface, the guarded RAG assi
 
    Please refer to the documentation inside `.env.template`
 
-   This template uses NEMO guardrails which require valid azure OpenAI credentials. You can change this 
+   This template uses NEMO guardrails which require valid azure OpenAI credentials. You can change this in `infra/settings_global_guardrails.py`.
 
 4. In a terminal, run:
    ```bash
@@ -119,6 +119,8 @@ Each template provides an end-to-end AI architecture, from raw inputs to deploye
 
 1. Modify the `LLM` setting in `infra/settings_generative.py` by changing `LLM=GlobalLLM.AZURE_OPENAI_GPT_4_O` to any other LLM from the `GlobalLLM` object.
 2. If you want to use an existing TextGen Deployment, set the `TEXTGEN_DEPLOYMENT_ID` in your `.env` file and change `LLM=GlobalLLM.DEPLOYED_LLM` in `infra/settings_generative.py`.
+   
+   In case we can't infer the prompt column name from your deployment, set it in `infra/settings_proxy_llm.py`. 
 3. Provide the required credentials in `.env` dependent on your choice.
 4. Run `pulumi up` to update your stack (Or rerun your quickstart).
       ```bash

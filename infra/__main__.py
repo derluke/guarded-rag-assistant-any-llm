@@ -30,8 +30,6 @@ from docsassist.deployments import (
 )
 from docsassist.i18n import LocaleSettings
 from docsassist.schema import (
-    PROMPT_COLUMN_NAME,
-    TARGET_COLUMN_NAME,
     ApplicationType,
     RAGType,
 )
@@ -56,6 +54,7 @@ from infra.settings_global_guardrails import (
     global_guardrails,
     stay_on_topic_guardrail,
 )
+from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
 
 DEPLOYMENT_ID = os.environ.get("TEXTGEN_DEPLOYMENT_ID")
 
@@ -95,7 +94,6 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
     credentials=credentials
 )
 
-
 keyword_guard_deployment = CustomModelDeployment(
     resource_name=f"Keyword Guard [{settings_main.project_name}]",
     custom_model_args=settings_keyword_guard.custom_model_args,
@@ -115,7 +113,6 @@ global_guard_deployments = [
     )
     for guard in global_guardrails
 ]
-
 
 all_guard_deployments = [
     keyword_guard_deployment,
@@ -162,10 +159,9 @@ if settings_main.core.rag_type == RAGType.DR:
             resource_name=f"Proxy Model LLM Blueprint [{settings_main.project_name}]",
             llm_blueprint_args=settings_generative.llm_blueprint_args,
             playground_id=playground.id,
-            prompt_column_name=PROMPT_COLUMN_NAME,
-            target_column_name=TARGET_COLUMN_NAME,
             proxy_llm_deployment_id=proxy_llm_deployment.id,
             vector_database_id=vector_database.id,
+            prompt_column_name=TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME,
         )
 
     elif settings_generative.LLM.name != GlobalLLM.DEPLOYED_LLM.name:
