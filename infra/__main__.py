@@ -118,6 +118,7 @@ if settings_main.core.rag_type == RAGType.DR:
         llm_blueprint = ProxyLLMBlueprint(
             resource_name=f"Proxy Model LLM Blueprint [{settings_main.project_name}]",
             llm_blueprint_args=settings_generative.llm_blueprint_args,
+            use_case_id=use_case.id,
             playground_id=playground.id,
             proxy_llm_deployment_id=proxy_llm_deployment.id,
             vector_database_id=vector_database.id,

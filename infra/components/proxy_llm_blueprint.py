@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional, Union
 
 import datarobot as dr
 import pulumi
@@ -30,7 +30,9 @@ from infra.common.schema import LLMBlueprintArgs
 class ProxyLLMBlueprint(pulumi.ComponentResource):
     @staticmethod
     def _get_custom_model_llm_validation(
-        proxy_llm_deployment_id: str, prompt_column_name: str | None = None
+        proxy_llm_deployment_id: str,
+        use_case_id: str,
+        prompt_column_name: str | None = None,
     ) -> str:
         dr_client = dr.client.get_client()
         try:
@@ -52,12 +54,59 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
                 )
             prompt_column_name = str(deployment.model.get("prompt", "promptText"))
 
+        from datarobot.models.genai.custom_model_validation import CustomModelValidation  # noqa: I001
+        from datarobot import Deployment, Model  # type: ignore
+
+        CustomModelValidation._update = CustomModelValidation.update  # type: ignore
+
+        def new_update(
+            self: Any,
+            name: Optional[str] = None,
+            prompt_column_name: Optional[str] = None,
+            target_column_name: Optional[str] = None,
+            deployment: Optional[Union[Deployment, str]] = None,
+            model: Optional[Union[Model, str]] = None,
+            prediction_timeout: Optional[int] = None,
+            **kwargs: Any,
+        ) -> CustomModelValidation:
+            return CustomModelValidation._update(  # type: ignore
+                self,
+                name=name,
+                prompt_column_name=prompt_column_name,
+                target_column_name=target_column_name,
+                deployment=deployment,
+                model=model,
+                prediction_timeout=prediction_timeout,
+            )
+
+        CustomModelValidation.update = new_update  # type: ignore
+
+        dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation._list = (  # type: ignore
+            dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation.list
+        )
+
+        def new_list(
+            *args: Any, **kwargs: Any
+        ) -> list[dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation]:
+            return [
+                val
+                for val in dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation._list(  # type: ignore
+                    *args, **kwargs
+                )
+                if val.use_case_id == kwargs.get("use_case")
+            ]
+
+        dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation.list = (  # type: ignore
+            new_list  # type: ignore
+        )
+
         llm_validation_id = get_update_or_create_custom_model_llm_validation(
             endpoint=dr_client.endpoint,
             token=dr_client.token,
             deployment_id=proxy_llm_deployment_id,
             prompt_column_name=prompt_column_name,
             target_column_name=target_column_name,
+            use_case=use_case_id,
         )
         return str(llm_validation_id)
 
@@ -65,6 +114,7 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
         self,
         resource_name: str,
         proxy_llm_deployment_id: pulumi.Output[str],
+        use_case_id: pulumi.Output[str],
         playground_id: pulumi.Output[str],
         llm_blueprint_args: LLMBlueprintArgs,
         vector_database_id: pulumi.Output[str] | None = None,
@@ -75,9 +125,13 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
             "custom:datarobot:ProxyLLMBlueprint", resource_name, None, opts
         )
 
-        self.llm_validation_id = proxy_llm_deployment_id.apply(
-            lambda id: self._get_custom_model_llm_validation(
-                proxy_llm_deployment_id=id, prompt_column_name=prompt_column_name
+        self.llm_validation_id = pulumi.Output.all(
+            proxy_llm_deployment_id=proxy_llm_deployment_id, use_case_id=use_case_id
+        ).apply(
+            lambda kwargs: self._get_custom_model_llm_validation(
+                proxy_llm_deployment_id=kwargs["proxy_llm_deployment_id"],
+                use_case_id=kwargs["use_case_id"],
+                prompt_column_name=prompt_column_name,
             )
         )
         dr_client = dr.client.get_client()
