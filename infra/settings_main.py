@@ -36,7 +36,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.absolute()
 # Core settings are overridable by environment variables; env values take precedence
 core = CoreSettings(
     rag_documents=str(
-        PROJECT_ROOT / "assets" / "scikit-learn-api-docs.zip"
+        PROJECT_ROOT / "assets" / "datarobot_english_documentation_docsassist.zip"
     ),
     rag_type=RAGType.DR,
     application_type=ApplicationType.DR,
