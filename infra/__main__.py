@@ -199,20 +199,20 @@ if settings_main.core.application_type == ApplicationType.DIY:
         source_version_id=application_source.version_id,
         use_case_ids=[use_case.id],
     )
+
+
 elif settings_main.core.application_type == ApplicationType.DR:
     client = dr.client.get_client()
-    feedback_metric_id = rag_deployment.id.apply(
-        lambda deployment_id: get_update_or_create_custom_metric(
-            endpoint=client.endpoint,
-            token=client.token,
-            deployment_id=deployment_id,
-            name="User Feedback",
-            baseline_values=[{"value": 0.5}],
-            directionality="higherIsBetter",
-            units="Positive Feedback",
-            type="average",
-            is_model_specific=True,
-        )
+
+    feedback_metric = datarobot.CustomMetric(
+        resource_name="Feedback Metric",
+        deployment_id=rag_deployment.id,
+        baseline_value=0.5,
+        directionality="higherIsBetter",
+        units="Positive Feedback",
+        type="average",
+        is_model_specific=True,
+        is_geospatial=False,
     )
 
     qa_application_pre = datarobot.QaApplication(
@@ -224,7 +224,7 @@ elif settings_main.core.application_type == ApplicationType.DR:
 
     app_source_version_id = pulumi.Output.all(
         app_id=qa_application_pre.id,
-        feedback_metric_id=feedback_metric_id,
+        feedback_metric_id=feedback_metric.id,
         rag_deployment_id=rag_deployment.deployment_id,
     ).apply(
         lambda kwargs: apply_feedback_score(
