@@ -81,6 +81,25 @@ class ProxyLLMBlueprint(pulumi.ComponentResource):
 
         CustomModelValidation.update = new_update  # type: ignore
 
+        dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation._list = (  # type: ignore
+            dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation.list
+        )
+
+        def new_list(
+            *args: Any, **kwargs: Any
+        ) -> list[dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation]:
+            return [
+                val
+                for val in dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation._list(  # type: ignore
+                    *args, **kwargs
+                )
+                if val.use_case_id == kwargs.get("use_case")
+            ]
+
+        dr.models.genai.custom_model_llm_validation.CustomModelLLMValidation.list = (  # type: ignore
+            new_list  # type: ignore
+        )
+
         llm_validation_id = get_update_or_create_custom_model_llm_validation(
             endpoint=dr_client.endpoint,
             token=dr_client.token,
