@@ -89,7 +89,6 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
 )
 
 guard_configurations = llm_metrics
-# + [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
