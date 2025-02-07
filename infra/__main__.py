@@ -21,6 +21,9 @@ import pulumi_datarobot as datarobot
 
 sys.path.append("..")
 
+import datarobot as dr
+from datarobotx.idp.custom_metrics import get_update_or_create_custom_metric
+
 from docsassist.deployments import (
     app_env_name,
     rag_deployment_env_name,
@@ -45,6 +48,7 @@ from infra.components.dr_llm_credential import (
     get_credentials,
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
+from infra.settings_app_infra import apply_feedback_score
 
 # from infra.settings_global_guardrails import stay_on_topic_guardrail
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
@@ -175,6 +179,7 @@ rag_deployment = CustomModelDeployment(
     use_case_ids=[use_case.id],
 )
 
+
 app_runtime_parameters = [
     datarobot.ApplicationSourceRuntimeParameterValueArgs(
         key=rag_deployment_env_name, type="deployment", value=rag_deployment.id
@@ -194,17 +199,52 @@ if settings_main.core.application_type == ApplicationType.DIY:
         source_version_id=application_source.version_id,
         use_case_ids=[use_case.id],
     )
+
+
 elif settings_main.core.application_type == ApplicationType.DR:
-    qa_application = datarobot.QaApplication(  # type: ignore[assignment]
-        resource_name=settings_app_infra.app_resource_name,
-        name=f"Guarded RAG Assistant [{settings_main.project_name}]",
+    client = dr.client.get_client()
+
+    feedback_metric = datarobot.CustomMetric(
+        resource_name="Feedback Metric",
+        deployment_id=rag_deployment.id,
+        baseline_value=0.5,
+        directionality="higherIsBetter",
+        units="Positive Feedback",
+        type="average",
+        is_model_specific=True,
+        is_geospatial=False,
+    )
+
+    qa_application_pre = datarobot.QaApplication(
+        resource_name=f"{settings_app_infra.app_resource_name}_pre",
+        name=f"Guarded RAG Assistant [{settings_main.project_name}] [Pre]",
         deployment_id=rag_deployment.deployment_id,
         opts=pulumi.ResourceOptions(delete_before_replace=True),
     )
+
+    app_source_version_id = pulumi.Output.all(
+        app_id=qa_application_pre.id,
+        feedback_metric_id=feedback_metric.id,
+        rag_deployment_id=rag_deployment.deployment_id,
+    ).apply(
+        lambda kwargs: apply_feedback_score(
+            application_id=kwargs["app_id"],
+            custom_metric_id=kwargs["feedback_metric_id"],
+            rag_deployment_id=kwargs["rag_deployment_id"],
+        )
+    )
+    qa_application = datarobot.CustomApplication(
+        resource_name=settings_app_infra.app_resource_name,
+        name=f"Guarded RAG Assistant [{settings_main.project_name}]",
+        source_version_id=app_source_version_id,
+        opts=pulumi.ResourceOptions(delete_before_replace=True),
+    )
+
 else:
     raise NotImplementedError(
         f"Unknown application type: {settings_main.core.application_type}"
     )
+
 
 qa_application.id.apply(settings_app_infra.ensure_app_settings)
 

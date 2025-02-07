@@ -14,6 +14,9 @@
 
 import datarobot as dr
 import pulumi
+from datarobotx.idp.custom_application_source_version import (
+    _unsafe_get_or_create_custom_application_source_version_from_previous,
+)
 
 from docsassist.i18n import LanguageCode, LocaleSettings
 from infra.common.globals import GlobalRuntimeEnvironment
@@ -76,3 +79,39 @@ app_source_args = ApplicationSourceArgs(
 ).model_dump(mode="json", exclude_none=True)
 
 app_resource_name: str = f"Guarded RAG Application [{project_name}]"
+
+
+def apply_feedback_score(
+    application_id: str, custom_metric_id: str, rag_deployment_id: str
+) -> str:
+    client = dr.client.get_client()
+    try:
+        app_source_id = (
+            client.get(f"customApplications/{application_id}/")
+            .json()
+            .get("customApplicationSourceId")
+        )
+    except Exception as e:
+        raise pulumi.RunError(
+            f"Failed to get custom application source id for application {application_id}"
+        ) from e
+    app_source_version_id = (
+        _unsafe_get_or_create_custom_application_source_version_from_previous(
+            endpoint=client.endpoint,
+            token=client.token,
+            custom_application_source_id=app_source_id,
+            runtime_parameter_values=[
+                {
+                    "field_name": "DEPLOYMENT_ID",
+                    "value": rag_deployment_id,
+                    "type": "string",
+                },
+                {
+                    "field_name": "CUSTOM_METRIC_ID",
+                    "value": custom_metric_id,
+                    "type": "string",
+                },
+            ],
+        )
+    )
+    return str(app_source_version_id)
