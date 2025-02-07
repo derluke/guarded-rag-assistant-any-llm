@@ -32,48 +32,6 @@ from .common.schema import (
 )
 from .settings_main import project_name
 
-
-prompt_tokens = datarobot.CustomModelGuardConfigurationArgs(
-    name=f"Prompt Tokens",
-    template_name="Prompt Tokens",
-    stages=[Stage.PROMPT],
-    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
-        action=ModerationAction.REPORT,
-        condition=Condition(
-            comparand="4096",
-            comparator=GuardConditionComparator.GREATER_THAN,
-        ).model_dump_json()
-    )
-)
-
-response_tokens = datarobot.CustomModelGuardConfigurationArgs(
-    name=f"Response Tokens",
-    template_name="Response Tokens",
-    stages=[Stage.RESPONSE],
-    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
-        action=ModerationAction.REPORT,
-        condition=Condition(
-            comparand="4096",
-            comparator=GuardConditionComparator.GREATER_THAN,
-        ).model_dump_json()
-    )
-)
-
-rouge = datarobot.CustomModelGuardConfigurationArgs(
-    name=f"ROUGE-1",
-    template_name="ROUGE-1",
-    stages=[Stage.RESPONSE],
-    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
-        action=ModerationAction.REPORT,
-        condition=Condition(
-            comparand="0.4",
-            comparator=GuardConditionComparator.LESS_THAN,
-        ).model_dump_json()
-    )
-)
-
-llm_metrics = [prompt_tokens, response_tokens, rouge]
-
 # guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_4_O)
 # if guardrail_credentials is None or not isinstance(
 #     guardrail_credentials, AzureOpenAICredentials
