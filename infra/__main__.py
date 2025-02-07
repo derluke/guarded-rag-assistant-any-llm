@@ -46,6 +46,7 @@ from infra.components.dr_llm_credential import (
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
 from infra.settings_global_guardrails import llm_metrics
+
 # from infra.settings_global_guardrails import stay_on_topic_guardrail
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
 
@@ -86,9 +87,9 @@ credentials = get_credentials(settings_generative.LLM)
 credential_runtime_parameter_values = get_credential_runtime_parameter_values(
     credentials=credentials
 )
-print (llm_metrics)
-guard_configurations = llm_metrics 
-#+ [stay_on_topic_guardrail]
+
+guard_configurations = llm_metrics
+# + [stay_on_topic_guardrail]
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
@@ -166,57 +167,57 @@ elif settings_main.core.rag_type == RAGType.DIY:
 else:
     raise NotImplementedError(f"Unknown RAG type: {settings_main.core.rag_type}")
 
-rag_deployment = CustomModelDeployment(
-    resource_name=f"Guarded RAG Deploy [{settings_main.project_name}]",
-    custom_model_version_id=rag_custom_model.version_id,
-    registered_model_args=settings_generative.registered_model_args,
-    prediction_environment=prediction_environment,
-    deployment_args=settings_generative.deployment_args,
-    use_case_ids=[use_case.id],
-)
+# rag_deployment = CustomModelDeployment(
+#     resource_name=f"Guarded RAG Deploy [{settings_main.project_name}]",
+#     custom_model_version_id=rag_custom_model.version_id,
+#     registered_model_args=settings_generative.registered_model_args,
+#     prediction_environment=prediction_environment,
+#     deployment_args=settings_generative.deployment_args,
+#     use_case_ids=[use_case.id],
+# )
 
-app_runtime_parameters = [
-    datarobot.ApplicationSourceRuntimeParameterValueArgs(
-        key=rag_deployment_env_name, type="deployment", value=rag_deployment.id
-    ),
-    datarobot.ApplicationSourceRuntimeParameterValueArgs(
-        key="APP_LOCALE", type="string", value=LocaleSettings().app_locale
-    ),
-]
+# app_runtime_parameters = [
+#     datarobot.ApplicationSourceRuntimeParameterValueArgs(
+#         key=rag_deployment_env_name, type="deployment", value=rag_deployment.id
+#     ),
+#     datarobot.ApplicationSourceRuntimeParameterValueArgs(
+#         key="APP_LOCALE", type="string", value=LocaleSettings().app_locale
+#     ),
+# ]
 
-if settings_main.core.application_type == ApplicationType.DIY:
-    application_source = datarobot.ApplicationSource(
-        runtime_parameter_values=app_runtime_parameters,
-        **settings_app_infra.app_source_args,
-    )
-    qa_application = datarobot.CustomApplication(
-        resource_name=settings_app_infra.app_resource_name,
-        source_version_id=application_source.version_id,
-        use_case_ids=[use_case.id],
-    )
-elif settings_main.core.application_type == ApplicationType.DR:
-    qa_application = datarobot.QaApplication(  # type: ignore[assignment]
-        resource_name=settings_app_infra.app_resource_name,
-        name=f"Guarded RAG Assistant [{settings_main.project_name}]",
-        deployment_id=rag_deployment.deployment_id,
-        opts=pulumi.ResourceOptions(delete_before_replace=True),
-    )
-else:
-    raise NotImplementedError(
-        f"Unknown application type: {settings_main.core.application_type}"
-    )
+# if settings_main.core.application_type == ApplicationType.DIY:
+#     application_source = datarobot.ApplicationSource(
+#         runtime_parameter_values=app_runtime_parameters,
+#         **settings_app_infra.app_source_args,
+#     )
+#     qa_application = datarobot.CustomApplication(
+#         resource_name=settings_app_infra.app_resource_name,
+#         source_version_id=application_source.version_id,
+#         use_case_ids=[use_case.id],
+#     )
+# elif settings_main.core.application_type == ApplicationType.DR:
+#     qa_application = datarobot.QaApplication(  # type: ignore[assignment]
+#         resource_name=settings_app_infra.app_resource_name,
+#         name=f"Guarded RAG Assistant [{settings_main.project_name}]",
+#         deployment_id=rag_deployment.deployment_id,
+#         opts=pulumi.ResourceOptions(delete_before_replace=True),
+#     )
+# else:
+#     raise NotImplementedError(
+#         f"Unknown application type: {settings_main.core.application_type}"
+#     )
 
-qa_application.id.apply(settings_app_infra.ensure_app_settings)
+# qa_application.id.apply(settings_app_infra.ensure_app_settings)
 
 
-pulumi.export(rag_deployment_env_name, rag_deployment.id)
-pulumi.export(app_env_name, qa_application.id)
+# pulumi.export(rag_deployment_env_name, rag_deployment.id)
+# pulumi.export(app_env_name, qa_application.id)
 
-pulumi.export(
-    settings_generative.deployment_args.resource_name,
-    rag_deployment.id.apply(get_deployment_url),
-)
-pulumi.export(
-    settings_app_infra.app_resource_name,
-    qa_application.application_url,
-)
+# pulumi.export(
+#     settings_generative.deployment_args.resource_name,
+#     rag_deployment.id.apply(get_deployment_url),
+# )
+# pulumi.export(
+#     settings_app_infra.app_resource_name,
+#     qa_application.application_url,
+# )
