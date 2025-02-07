@@ -22,6 +22,7 @@ from docsassist.credentials import AzureOpenAICredentials
 from infra.components.dr_llm_credential import get_credentials
 
 from .common.globals import (
+    GlobalGuardrailTemplateName,
     GlobalLLM,
 )
 from .common.schema import (
@@ -31,6 +32,46 @@ from .common.schema import (
     Stage,
 )
 from .settings_main import project_name
+
+prompt_tokens = datarobot.CustomModelGuardConfigurationArgs(
+    name="Prompt Tokens",
+    template_name="Prompt Tokens",
+    stages=[Stage.PROMPT],
+    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
+        action=ModerationAction.REPORT,
+        condition=Condition(
+            comparand="4096",
+            comparator=GuardConditionComparator.GREATER_THAN,
+        ).model_dump_json(),
+    ),
+)
+
+response_tokens = datarobot.CustomModelGuardConfigurationArgs(
+    name="Response Tokens",
+    template_name="Response Tokens",
+    stages=[Stage.RESPONSE],
+    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
+        action=ModerationAction.REPORT,
+        condition=Condition(
+            comparand="4096",
+            comparator=GuardConditionComparator.GREATER_THAN,
+        ).model_dump_json(),
+    ),
+)
+
+rouge = datarobot.CustomModelGuardConfigurationArgs(
+    name="ROUGE-1 Guard",
+    template_name=GlobalGuardrailTemplateName.ROUGE_1,
+    stages=[Stage.RESPONSE],
+    intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
+        action=ModerationAction.REPORT,
+        condition=Condition(
+            comparand="0.4",
+            comparator=GuardConditionComparator.LESS_THAN,
+        ).model_dump_json(),
+    ),
+)
+
 
 # guardrail_credentials = get_credentials(GlobalLLM.AZURE_OPENAI_GPT_4_O)
 # if guardrail_credentials is None or not isinstance(
@@ -94,3 +135,10 @@ from .settings_main import project_name
 #             """),
 #     ),
 # )
+
+llm_metrics = [
+    prompt_tokens,
+    response_tokens,
+    rouge,
+    # stay_on_topic_guardrail,
+]

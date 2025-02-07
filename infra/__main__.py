@@ -45,6 +45,7 @@ from infra.components.dr_llm_credential import (
     get_credentials,
 )
 from infra.components.proxy_llm_blueprint import ProxyLLMBlueprint
+from infra.settings_global_guardrails import llm_metrics
 
 # from infra.settings_global_guardrails import stay_on_topic_guardrail
 from infra.settings_proxy_llm import TEXTGEN_DEPLOYMENT_PROMPT_COLUMN_NAME
@@ -87,8 +88,7 @@ credential_runtime_parameter_values = get_credential_runtime_parameter_values(
     credentials=credentials
 )
 
-guard_configurations: list[datarobot.CustomModelGuardConfigurationArgs] = []
-# guard_configurations = [stay_on_topic_guardrail]
+guard_configurations = llm_metrics
 
 if settings_main.core.rag_type == RAGType.DR:
     dataset = datarobot.DatasetFromFile(
