@@ -34,8 +34,8 @@ from .common.schema import (
 from .settings_main import project_name
 
 prompt_tokens = datarobot.CustomModelGuardConfigurationArgs(
-    name="Prompt Tokens Guard",
-    template_name=GlobalGuardrailTemplateName.TOKEN_COUNT,
+    name="Prompt Tokens",
+    template_name="Prompt Tokens",
     stages=[Stage.PROMPT],
     intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
         action=ModerationAction.REPORT,
@@ -47,8 +47,8 @@ prompt_tokens = datarobot.CustomModelGuardConfigurationArgs(
 )
 
 response_tokens = datarobot.CustomModelGuardConfigurationArgs(
-    name="Response Tokens Guard",
-    template_name=GlobalGuardrailTemplateName.TOKEN_COUNT,
+    name="Response Tokens",
+    template_name="Response Tokens",
     stages=[Stage.RESPONSE],
     intervention=datarobot.CustomModelGuardConfigurationInterventionArgs(
         action=ModerationAction.REPORT,
