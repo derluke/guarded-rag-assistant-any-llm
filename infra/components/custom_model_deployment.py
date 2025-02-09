@@ -83,7 +83,7 @@ class CustomModelDeployment(pulumi.ComponentResource):
             prediction_environment_id=prediction_environment.id,
             registered_model_version_id=self.registered_model.version_id,
             **deployment_args.model_dump(),
-            opts=pulumi.ResourceOptions(parent=self),
+            opts=pulumi.ResourceOptions(parent=self, replace_on_changes=["*"]),
             use_case_ids=use_case_ids,
         )
 
