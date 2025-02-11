@@ -172,6 +172,7 @@ class ChunkingParameters(BaseModel):
     chunking_method: VectorDatabaseChunkingMethod | None = None
     chunk_size: int | None = Field(ge=128, le=512)
     chunk_overlap_percentage: int | None = None
+    is_separator_regex: bool | None = None
     separators: list[str] | None = None
 
 
