@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.1.18] - 2025-01-18
+
+### Added
+- GPT-4o-Mini now an option in the configuration.
+
+### Changed
+- Updated system prompt to be more helpful
+
+### Fixed
+- Remove environment ID from LLM custom model
+
 ## [0.1.17] - 2025-01-15
 
 ### Fixed

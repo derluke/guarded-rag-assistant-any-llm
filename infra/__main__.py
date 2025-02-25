@@ -159,6 +159,7 @@ elif settings_main.core.rag_type == RAGType.DIY:
         runtime_parameter_values=credential_runtime_parameter_values,
         guard_configurations=guard_configurations,
         use_case_ids=[use_case.id],
+        base_environment_id=settings_main.runtime_environment_moderations.id,
         **settings_generative.custom_model_args.model_dump(
             mode="json", exclude_none=True
         ),

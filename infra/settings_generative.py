@@ -44,16 +44,14 @@ from .settings_main import (
     core,
     default_prediction_server_id,
     project_name,
-    runtime_environment_moderations,
 )
 
-LLM = GlobalLLM.AZURE_OPENAI_GPT_4_O
+LLM = GlobalLLM.AZURE_OPENAI_GPT_4_O_MINI
 
 
 custom_model_args = CustomModelArgs(
     resource_name=f"Guarded RAG Custom Model [{project_name}]",
     name="Guarded RAG Assistant",  # built-in QA app uses this as the AI's name
-    base_environment_id=runtime_environment_moderations.id,
     target_name=TARGET_COLUMN_NAME,
     target_type=dr.enums.TARGET_TYPE.TEXT_GENERATION,
     opts=pulumi.ResourceOptions(delete_before_replace=True),
@@ -103,10 +101,12 @@ if core.rag_type == RAGType.DR:
     )
 
     system_prompt = """\
-                Use the following pieces of context to answer the user's question.
-                If you don't know the answer, just say that you don't know, don't try to make up an answer.
-                ----------------
-                {context}"""
+                You are a helpful assistant, helping users answer questions about some document(s). 
+
+                You will be given extracts from the document(s) to help answer the question.
+
+                Try to use information within the sources. Don't use citations.
+                """
 
     llm_blueprint_args = LLMBlueprintArgs(
         resource_name=f"Guarded RAG LLM Blueprint [{project_name}]",
