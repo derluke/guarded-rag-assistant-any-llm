@@ -170,16 +170,17 @@ class LLMBlueprintArgs(BaseModel):
 class ChunkingParameters(BaseModel):
     embedding_model: VectorDatabaseEmbeddingModel | None = None
     chunking_method: VectorDatabaseChunkingMethod | None = None
-    chunk_size: int | None = Field(ge=128, le=512)
+    chunk_size: int | None = None
     chunk_overlap_percentage: int | None = None
     is_separator_regex: bool | None = None
     separators: list[str] | None = None
 
 
 class VectorDatabaseArgs(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     resource_name: str
     name: str | None = None
-    chunking_parameters: ChunkingParameters
+    chunking_parameters: datarobot.VectorDatabaseChunkingParametersArgs
 
 
 class DatasetArgs(BaseModel):
