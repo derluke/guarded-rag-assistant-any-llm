@@ -28,7 +28,6 @@ from docsassist.schema import TARGET_COLUMN_NAME, RAGModelSettings, RAGType
 from infra.common.globals import GlobalLLM
 
 from .common.schema import (
-    ChunkingParameters,
     CustomModelArgs,
     DatasetArgs,
     DeploymentArgs,
@@ -93,10 +92,13 @@ if core.rag_type == RAGType.DR:
 
     vector_database_args = VectorDatabaseArgs(
         resource_name=f"Guarded RAG Vector DB [{project_name}]",
-        chunking_parameters=ChunkingParameters(
-            embedding_model=dr.enums.VectorDatabaseEmbeddingModel.JINA_EMBEDDING_T_EN_V1,
-            chunk_size=512,
-            chunk_overlap_percentage=20,
+        chunking_parameters=datarobot.VectorDatabaseChunkingParametersArgs(
+            # chunk_overlap_percentage=0,
+            # chunk_size=256,
+            embedding_model=dr.enums.VectorDatabaseEmbeddingModel.JINA_EMBEDDING_S_EN_V2,
+            # is_separator_regex=None,
+            # separators=["\n"],
+            chunking_method=dr.enums.VectorDatabaseChunkingMethod.SEMANTIC,
         ),
     )
 

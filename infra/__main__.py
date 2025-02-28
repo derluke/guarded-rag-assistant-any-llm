@@ -39,6 +39,7 @@ from infra.common.feature_flags import check_feature_flags
 from infra.common.globals import GlobalLLM
 from infra.common.papermill import run_notebook
 from infra.common.urls import get_deployment_url
+from infra.components import vector_database_patch
 from infra.components.custom_model_deployment import CustomModelDeployment
 from infra.components.dr_llm_credential import (
     get_credential_runtime_parameter_values,
@@ -95,7 +96,8 @@ if settings_main.core.rag_type == RAGType.DR:
         use_case_ids=[use_case.id],
         **settings_generative.dataset_args.model_dump(),
     )
-    vector_database = datarobot.VectorDatabase(
+
+    vector_database = vector_database_patch.DataRobotVectorDatabase(
         dataset_id=dataset.id,
         use_case_id=use_case.id,
         **settings_generative.vector_database_args.model_dump(),
